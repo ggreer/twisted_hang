@@ -4,7 +4,13 @@ import traceback
 
 from twisted.internet import task
 
-# Usage: Create a WhyHang object and call .start() on it. Stuff will magically get printed out if the main thread hangs for more than MAX_DELAY seconds.
+''' Usage:
+import twisted_hang
+blah = twisted_hang.WhyHang()
+blah.start()
+
+Stuff will magically get printed out if the main thread hangs for more than MAX_DELAY seconds.
+'''
 
 # These values are seconds
 CANCEL_INTERVAL = 0.1
