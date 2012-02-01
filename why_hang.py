@@ -4,16 +4,23 @@ import traceback
 
 from twisted.internet import defer, task
 
-# Usage: just import why_hang and stuff magically gets printed out if the main thread hangs. The hang time to trigger a traceback is somewhat probablistic. Worst case, the reactor hangs for SIGALRM_INTERVAL + MAX_DELAY seconds.
+# Usage: just import why_hang and stuff magically gets printed out if the main thread hangs. The hang time to trigger a traceback is somewhat probablistic. Worst case, the reactor hangs for MAX_DELAY seconds.
 
 # These values are seconds
-SIGALRM_INTERVAL = 0.1
-MAX_DELAY = 0.2
+CANCEL_INTERVAL = 0.1
+MAX_DELAY = 0.5
 
-def print_traceback(signal, frame):
+
+def reset_itimer():
+    # TODO: change this to ITIMER_VIRTUAL for real-life usage
+    signal.setitimer(signal.ITIMER_REAL, MAX_DELAY)
+
+
+def log_traceback(signal, frame):
     # Oh snap, cancel_sigalrm didn't get called
     traceback.print_stack(frame)
-    set_itimer()
+    reset_itimer()
+
 
 def cancel_sigalrm():
     # Cancel any pending alarm
@@ -21,16 +28,14 @@ def cancel_sigalrm():
         print "Previous alarm cancelled"
     else:
         print "No SIGALRM to cancel"
-    set_itimer()
+    reset_itimer()
 
-def set_itimer():
-    # TODO: change this to ITIMER_VIRTUAL for real-life usage
-    signal.setitimer(signal.ITIMER_REAL, SIGALRM_INTERVAL + MAX_DELAY)
 
 # Handle SIGALRMs with print_traceback
-signal.signal(signal.SIGALRM, print_traceback)
+signal.signal(signal.SIGALRM, log_traceback)
 
-# this LoopingCall is run by the reactor. 
+
+# this LoopingCall is run by the reactor.
 # If the reactor is hung, cancel_sigalrm won't run and the handler for SIGALRM will fire
 lc = task.LoopingCall(cancel_sigalrm)
-lc.start(SIGALRM_INTERVAL)
+lc.start(CANCEL_INTERVAL)
