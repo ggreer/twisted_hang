@@ -10,6 +10,10 @@ MAX_DELAY = 0.5
 
 
 class HangWatcher(object):
+    bad_functions = {}
+    bad_frames = []
+    hang_count = 0
+
     def __init__(self, cancel_interval=CANCEL_INTERVAL, max_delay=MAX_DELAY):
         """docstring for __init__"""
         # Handle SIGALRMs with print_traceback
@@ -29,9 +33,11 @@ class HangWatcher(object):
         signal.setitimer(signal.ITIMER_REAL, self.max_delay)
 
     def log_traceback(self, signal, frame):
+        self.hang_count += 1
         # Oh snap, cancel_sigalrm didn't get called
         # TODO: log stuff to a file or profiling data or whatever
         traceback.print_stack(frame)
+        self.bad_frames.append(frame)
         self.reset_itimer()
 
     def cancel_sigalrm(self):
@@ -39,3 +45,11 @@ class HangWatcher(object):
         if signal.alarm(0) == 0:
             print "No SIGALRM to cancel. This should only happen if we handled a traceback"
         self.reset_itimer()
+
+    def stats(self):
+        stats_dict = {"hang_count": self.hang_count,
+                      "bad_functions": self.bad_functions,
+                      "bad_frames": self.bad_frames,
+                     }
+
+        return stats_dict
