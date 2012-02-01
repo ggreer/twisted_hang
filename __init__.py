@@ -1,3 +1,4 @@
+import collections
 import inspect
 import signal
 import traceback
@@ -10,12 +11,10 @@ MAX_DELAY = 0.5
 
 
 class HangWatcher(object):
-    bad_functions = {}
-    bad_frames = []
+    bad_functions = collections.defaultdict(int)
     hang_count = 0
 
     def __init__(self, cancel_interval=CANCEL_INTERVAL, max_delay=MAX_DELAY):
-        """docstring for __init__"""
         # Handle SIGALRMs with print_traceback
         signal.signal(signal.SIGALRM, self.log_traceback)
 
@@ -30,14 +29,17 @@ class HangWatcher(object):
 
     def reset_itimer(self):
         # TODO: change this to ITIMER_VIRTUAL for real-life usage
+        #signal.setitimer(signal.ITIMER_VIRTUAL, self.max_delay)
         signal.setitimer(signal.ITIMER_REAL, self.max_delay)
 
     def log_traceback(self, signal, frame):
-        self.hang_count += 1
         # Oh snap, cancel_sigalrm didn't get called
-        # TODO: log stuff to a file or profiling data or whatever
         traceback.print_stack(frame)
-        self.bad_frames.append(frame)
+
+        self.hang_count += 1
+
+        code_tuple = (frame.f_code.co_name, frame.f_code.co_filename, frame.f_code.co_firstlineno)
+        self.bad_functions[code_tuple] += 1
         self.reset_itimer()
 
     def cancel_sigalrm(self):
@@ -46,10 +48,15 @@ class HangWatcher(object):
             print "No SIGALRM to cancel. This should only happen if we handled a traceback"
         self.reset_itimer()
 
+    def print_stats(self):
+        print "Main thread was hung %s times" % self.hang_count
+        print "Worst offending functions:"
+        for k, v in self.bad_functions.items():
+            print "Function %s count %s" % (k, v)
+
     def stats(self):
         stats_dict = {"hang_count": self.hang_count,
                       "bad_functions": self.bad_functions,
-                      "bad_frames": self.bad_frames,
                      }
 
         return stats_dict
