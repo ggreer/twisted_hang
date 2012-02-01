@@ -4,20 +4,12 @@ import traceback
 
 from twisted.internet import task
 
-''' Usage:
-import twisted_hang
-blah = twisted_hang.WhyHang()
-blah.start()
-
-Stuff will magically get printed out if the main thread hangs for more than MAX_DELAY seconds.
-'''
-
 # These values are seconds
 CANCEL_INTERVAL = 0.1
 MAX_DELAY = 0.5
 
 
-class WhyHang(object):
+class HangWatcher(object):
     def __init__(self, cancel_interval=CANCEL_INTERVAL, max_delay=MAX_DELAY):
         """docstring for __init__"""
         # Handle SIGALRMs with print_traceback
@@ -38,6 +30,7 @@ class WhyHang(object):
 
     def log_traceback(self, signal, frame):
         # Oh snap, cancel_sigalrm didn't get called
+        # TODO: log stuff to a file or profiling data or whatever
         traceback.print_stack(frame)
         self.reset_itimer()
 
