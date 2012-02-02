@@ -50,7 +50,7 @@ class HangWatcher(object):
 
         # This could be expensive
         bad_functions_list = self.bad_functions.items()
-        bad_functions_list.sort(key=lambda x: x[1])
+        bad_functions_list.sort(key=lambda x: x[1], reverse=True)
 
         print "Offending functions:"
         for func, count in bad_functions_list:
