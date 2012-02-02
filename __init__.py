@@ -1,5 +1,4 @@
 import collections
-import inspect
 import signal
 import traceback
 
@@ -45,7 +44,7 @@ class HangWatcher(object):
     def cancel_sigalrm(self):
         # Cancel any pending alarm
         if signal.alarm(0) == 0:
-            print "No SIGALRM to cancel. This should only happen if we handled a traceback"
+            print "No SIGALRM to cancel. This should only happen if we just handled a traceback"
         self.reset_itimer()
 
     def print_stats(self):
@@ -55,9 +54,13 @@ class HangWatcher(object):
         bad_functions_list = self.bad_functions.items()
         bad_functions_list.sort(key=lambda x: x[1])
 
-        print "Worst offending functions:"
+        print "Offending functions:"
         for func, count in bad_functions_list:
             print "%s %s in %s:%s" % (count, func[0], func[1], func[2])
+
+    def reset_stats(self):
+        self.hang_count = 0
+        self.bad_functions.clear()
 
     def stats(self):
         stats_dict = {"hang_count": self.hang_count,
