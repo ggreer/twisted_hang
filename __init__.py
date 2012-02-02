@@ -41,8 +41,7 @@ class HangWatcher(object):
 
     def cancel_sigalrm(self):
         # Cancel any pending alarm
-        if signal.alarm(0) == 0:
-            print "No SIGALRM to cancel. This should only happen if we just handled a traceback"
+        signal.alarm(0)
         self.reset_itimer()
 
     def print_stats(self, reset_stats=False):
