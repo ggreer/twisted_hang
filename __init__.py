@@ -47,6 +47,10 @@ class HangWatcher(object):
     def print_stats(self, reset_stats=False):
         print "Main thread was hung %s times" % self.hang_count
 
+        # Don't print useless stuff below if there are no problems
+        if self.hang_count == 0:
+            return
+
         # This could be expensive
         bad_functions_list = self.bad_functions.items()
         bad_functions_list.sort(key=lambda x: x[1], reverse=True)
