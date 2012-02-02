@@ -47,7 +47,7 @@ class HangWatcher(object):
             print "No SIGALRM to cancel. This should only happen if we just handled a traceback"
         self.reset_itimer()
 
-    def print_stats(self):
+    def print_stats(self, reset_stats=False):
         print "Main thread was hung %s times" % self.hang_count
 
         # This could be expensive
@@ -57,6 +57,9 @@ class HangWatcher(object):
         print "Offending functions:"
         for func, count in bad_functions_list:
             print "%s %s in %s:%s" % (count, func[0], func[1], func[2])
+
+        if reset_stats:
+            self.reset_stats()
 
     def reset_stats(self):
         self.hang_count = 0
