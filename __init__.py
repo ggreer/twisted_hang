@@ -50,9 +50,14 @@ class HangWatcher(object):
 
     def print_stats(self):
         print "Main thread was hung %s times" % self.hang_count
+
+        # This could be expensive
+        bad_functions_list = self.bad_functions.items()
+        bad_functions_list.sort(key=lambda x: x[1])
+
         print "Worst offending functions:"
-        for k, v in self.bad_functions.items():
-            print "Function %s count %s" % (k, v)
+        for func, count in bad_functions_list:
+            print "%s %s in %s:%s" % (count, func[0], func[1], func[2])
 
     def stats(self):
         stats_dict = {"hang_count": self.hang_count,
