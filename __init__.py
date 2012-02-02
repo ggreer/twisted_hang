@@ -27,9 +27,7 @@ class HangWatcher(object):
         self.lc.start(self.cancel_interval)
 
     def reset_itimer(self):
-        # TODO: change this to ITIMER_VIRTUAL for real-life usage
-        #signal.setitimer(signal.ITIMER_VIRTUAL, self.max_delay)
-        signal.setitimer(signal.ITIMER_REAL, self.max_delay)
+        signal.setitimer(signal.ITIMER_VIRTUAL, self.max_delay)
 
     def log_traceback(self, signal, frame):
         # Oh snap, cancel_sigalrm didn't get called
