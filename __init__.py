@@ -62,6 +62,7 @@ class HangWatcher(object):
             self.reset_stats()
 
     def reset_stats(self):
+        print "Resetting stats"
         self.hang_count = 0
         self.bad_functions.clear()
 
