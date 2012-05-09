@@ -42,8 +42,11 @@ class HangWatcherTestCase(TestCase):
         if interval < 0:
             raise signal.ItimerError("[Errno 22] Invalid argument")
 
+        def alarm():
+            os.kill(os.getpid(), sig)
+
         self.alarms.append(
-            self.itimer_clock.callLater(interval, os.kill, os.getpid(), sig))
+            self.itimer_clock.callLater(interval, alarm))
 
     def fake_signal_alarm(self, delay):
         """
@@ -57,6 +60,20 @@ class HangWatcherTestCase(TestCase):
                 alarm.cancel()
         else:
             self.fake_setitimer(signal.ITIMER_REAL, delay)
+
+    def advance_time(self, seconds, clocks):
+        """
+        Advances time incrementally, .5 seconds at a time, on all the clocks
+
+        @param seconds: seconds to advance time
+        @type seconds: C{int}
+
+        @param clocks: list of clocks
+        @type clocks: C{list}
+        """
+        for i in range(seconds * 2):
+            for clock in clocks:
+                clock.advance(.5)
 
     def setUp(self):
         # use task.Clock to simulate reactor hanging, and to simulate time
@@ -91,21 +108,42 @@ class HangWatcherTestCase(TestCase):
         watcher = twisted_hang.HangWatcher()
         self.assertTrue(watcher.cancel_interval < watcher.max_delay)
 
-    # def test_logs_no_hangs_if_not_hung(self):
-    #     """
-    #     If the reactor isn't hung, the alarm should be canceled/should not
-    #     alarm after C{max_delay}
-    #     """
-    #     self.watcher.start()
-    #     self.fake_reactor.advance(6)
-    #     self.itimer_clock.advance(6)
-    #     self.assertEqual(0, self.watcher.hang_count)
+    def test_logs_no_hangs_if_not_hung(self):
+        """
+        If the reactor isn't hung, the alarm should be canceled/should not
+        alarm after C{max_delay}.  Which means that the reactor is not
+        currently hung, the hang count is 0, and no bad functions have been
+        recorded.
+        """
+        self.watcher.start()
+        # time should advance on both the timer clock and the reactor
+        self.advance_time(6, [self.fake_reactor, self.itimer_clock])
 
-    # def test_logs_hang_if_hung(self):
-    #     """
-    #     If the reactor is hung, the alarm never gets canceled and log_traceback
-    #     should be called
-    #     """
-    #     self.watcher.start()
-    #     self.itimer_clock.advance(6)
-    #     self.assertEqual(1, self.watcher.hang_count)
+        self.assertEqual(0, self.watcher.hang_count)
+        self.assertTrue(not self.watcher.currently_hung)
+        self.assertEqual(0, len(self.watcher.bad_functions))
+        self.assertEqual((), self.watcher.current_bad_function)
+
+    def test_logs_hang_if_hung(self):
+        """
+        If the reactor is hung, the alarm never gets canceled and log_traceback
+        should be called, which means that the reactor is currently hung,
+        the hang count is 1, and a bad function has been recorded
+        """
+        self.watcher.start()
+        # time should advance on both the timer clock and the reactor
+        self.advance_time(6, [self.itimer_clock])
+
+        self.assertEqual(1, self.watcher.hang_count)
+        self.assertTrue(self.watcher.currently_hung)
+        # one bad function should have been recorded
+        self.assertEqual(1, len(self.watcher.bad_functions))
+        # the bad function should be a tuple of the function name, the
+        # filename, and the first line number of the function
+        self.assertEqual(3, len(self.watcher.current_bad_function))
+
+        bad_function = self.watcher.bad_functions.items()[0]
+        # the bad function count for that particular function should be 1
+        self.assertEqual(1, bad_function[1])
+        # the bad function recorded should be the current bad function
+        self.assertEqual(bad_function[0], self.watcher.current_bad_function)
