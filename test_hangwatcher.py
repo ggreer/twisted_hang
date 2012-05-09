@@ -5,6 +5,7 @@ Tests for L{twisted_hang.HangWatcher}
 import mock
 import os
 import signal
+import types
 
 from twisted.internet.task import Clock
 from twisted.trial.unittest import TestCase
@@ -170,3 +171,18 @@ class HangWatcherTestCase(TestCase):
         # the current state should be reset though
         self.assertTrue(not self.watcher.currently_hung)
         self.assertEqual((), self.watcher.current_bad_function)
+
+    def test_add_hang_observer(self):
+        """
+        On reactor hang, any added observers should be called with the
+        current stack frame
+        """
+        observer = mock.Mock()
+        self.watcher.add_hang_observer(observer)
+        self.watcher.start()
+        # time should advance on the timer clock and the reactor is hung
+        self.advance_time(6, [self.itimer_clock])
+
+        self.assertEqual(1, observer.call_count)
+        self.assertTrue(isinstance(observer.call_args_list[0][0][0],
+                                   types.FrameType))
