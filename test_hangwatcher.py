@@ -57,7 +57,8 @@ class HangWatcherTestCase(TestCase):
             alarms = self.alarms
             self.alarms = []
             for alarm in alarms:
-                alarm.cancel()
+                if alarm.active():
+                    alarm.cancel()
         else:
             self.fake_setitimer(signal.ITIMER_REAL, delay)
 
@@ -131,7 +132,7 @@ class HangWatcherTestCase(TestCase):
         the hang count is 1, and a bad function has been recorded
         """
         self.watcher.start()
-        # time should advance on both the timer clock and the reactor
+        # time should advance on the timer clock and the reactor is hung
         self.advance_time(6, [self.itimer_clock])
 
         self.assertEqual(1, self.watcher.hang_count)
@@ -147,3 +148,25 @@ class HangWatcherTestCase(TestCase):
         self.assertEqual(1, bad_function[1])
         # the bad function recorded should be the current bad function
         self.assertEqual(bad_function[0], self.watcher.current_bad_function)
+
+    def tests_current_hung_status_gets_reset_if_reactor_unhangs_itself(self):
+        """
+        If the reactor is recorded as hung, but then unhangs itself, then the
+        current hang status should be False.
+        """
+        self.watcher.start()
+        # time should advance on the timer clock and the reactor is hung
+        self.advance_time(6, [self.itimer_clock])
+
+        # sanity check
+        self.assertEqual(1, self.watcher.hang_count)
+        self.assertTrue(self.watcher.currently_hung)
+        # time should advance on both the timer clock and the reactor
+        self.advance_time(6, [self.fake_reactor, self.itimer_clock])
+
+        # the hang count should not have decreased
+        self.assertEqual(1, self.watcher.hang_count)
+        self.assertEqual(1, len(self.watcher.bad_functions))
+        # the current state should be reset though
+        self.assertTrue(not self.watcher.currently_hung)
+        self.assertEqual((), self.watcher.current_bad_function)
